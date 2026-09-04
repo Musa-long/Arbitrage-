@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: arbiflow
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: DEPOSIT_WEBHOOK_SECRET
+        sync: false
