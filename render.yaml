@@ -1,9 +1,11 @@
 services:
   - type: web
     name: arbiflow
-    env: node
+    runtime: node
+    plan: free
     buildCommand: npm install
     startCommand: npm start
+    healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
         sync: false

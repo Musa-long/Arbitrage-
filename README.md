@@ -28,3 +28,11 @@ header: x-deposit-signature
 Only a `confirmed` event creates a ledger credit. Duplicate provider events are rejected by `provider_event_id`.
 
 Never commit private keys, seed phrases, exchange secrets, or webhook secrets to GitHub.
+
+## Render deployment
+1. Create a PostgreSQL database in Render.
+2. Copy its **Internal Database URL** into the web service variable `DATABASE_URL`.
+3. Add strong random values for `JWT_SECRET` and `DEPOSIT_WEBHOOK_SECRET`.
+4. Deploy/redeploy the web service.
+5. Test `/api/health`. It should return `{"ok":true,"database":true}`.
+6. Do not put bank passwords, crypto seed phrases, private keys, or other secrets in GitHub.

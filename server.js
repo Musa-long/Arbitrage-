@@ -9,7 +9,28 @@ require('dotenv').config();
 const app=express();
 app.use(cors());
 app.use(express.json({limit:'100kb'}));
-const pool=new Pool({connectionString:process.env.DATABASE_URL,ssl:process.env.DATABASE_URL?.includes('localhost')?false:{rejectUnauthorized:false}});
+const hasDatabase=Boolean(process.env.DATABASE_URL);
+const pool=hasDatabase ? new Pool({
+  connectionString:process.env.DATABASE_URL,
+  ssl:process.env.DATABASE_URL.includes('localhost') ? false : {rejectUnauthorized:false}
+}) : null;
+
+async function initDatabase(){
+  if(!pool) return;
+  const fs=require('fs');
+  const schema=fs.readFileSync(require('path').join(__dirname,'schema.sql'),'utf8');
+  await pool.query(schema);
+}
+
+function requireDatabase(req,res,next){
+  if(!pool) return res.status(503).json({error:'Database is not configured on this Render service'});
+  next();
+}
+app.use('/api/auth', requireDatabase);
+app.use('/api/me', requireDatabase);
+app.use('/api/deposits', requireDatabase);
+app.use('/api/balance', requireDatabase);
+app.use('/api/webhooks', requireDatabase);
 
 function auth(req,res,next){
   try{
@@ -26,8 +47,9 @@ function safeEq(a,b){
 }
 
 app.get('/api/health',async(req,res)=>{
+  if(!pool) return res.status(503).json({ok:false,database:false,error:'DATABASE_URL is not configured'});
   try{await pool.query('SELECT 1');res.json({ok:true,database:true});}
-  catch(e){res.status(503).json({ok:false,database:false});}
+  catch(e){res.status(503).json({ok:false,database:false,error:'Database connection failed'});}
 });
 
 app.post('/api/auth/register',async(req,res)=>{
@@ -155,6 +177,24 @@ const opportunities=[
 ];
 app.get('/api/opportunities',(req,res)=>res.json({updatedAt:new Date().toISOString(),opportunities}));
 
-app.get('*',(req,res)=>res.sendFile(require('path').join(__dirname,'public','index.html')));
-const port=process.env.PORT||10000;
-app.listen(port,()=>console.log('ArbiFlow server listening on '+port));
+app.use((req,res,next)=>{
+  if(req.method==='GET' && !req.path.startsWith('/api/')){
+    return res.sendFile(require('path').join(__dirname,'public','index.html'));
+  }
+  next();
+});
+const port=Number(process.env.PORT)||10000;
+async function start(){
+  try{
+    if(pool){
+      await initDatabase();
+      console.log('Database schema ready');
+    }else{
+      console.warn('DATABASE_URL is not configured; frontend will load but database features are disabled');
+    }
+  }catch(e){
+    console.error('Database initialization failed:',e.message);
+  }
+  app.listen(port,'0.0.0.0',()=>console.log('ArbiFlow server listening on '+port));
+}
+start();
