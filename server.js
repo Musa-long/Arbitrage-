@@ -1,3 +1,4 @@
+const path = require('path');
 const express=require('express');
 const cors=require('cors');
 const bcrypt=require('bcryptjs');
@@ -179,7 +180,7 @@ app.get('/api/opportunities',(req,res)=>res.json({updatedAt:new Date().toISOStri
 
 app.use((req,res,next)=>{
   if(req.method==='GET' && !req.path.startsWith('/api/')){
-    return res.sendFile(require('path').join(__dirname,'public','index.html'));
+    return res.sendFile(path.join(__dirname, 'public','index.html'));
   }
   next();
 });
